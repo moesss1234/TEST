@@ -6,21 +6,30 @@ import time
 import cv2
 import os
 import glob
+import tkinter as tk
+import cv2
+from PIL import Image, ImageTk
+# from program_detect import x5,y5,w5,h5
 
 files = glob.glob('output/*.png')
 for f in files:
 	os.remove(f)
+f = open("coor.txt", "r")
+coor = f.readlines()
 
+print(coor)
 from sort import *
 tracker = Sort()
 memory = {}
-line = [(217, 444), (964, 409)]
+# line = [(217, 444), (964, 409)]
+line = [(int(coor[0]), int(coor[1])), (int(coor[2]), int(coor[3]))]
 counter = 0
 fronthuman = 0
 backhuman = 0
 BACK = 0
 FRONT = 0
 k=False
+
 # construct the argument parse and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-i", "--input", required=True,
@@ -29,9 +38,9 @@ ap.add_argument("-o", "--output", required=True,
 	help="path to output video")
 ap.add_argument("-y", "--yolo", required=True,
 	help="base path to YOLO directory")
-ap.add_argument("-c", "--confidence", type=float, default=0.3,
+ap.add_argument("-c", "--confidence", type=float, default=0.1,
 	help="minimum probability to filter weak detections")
-ap.add_argument("-t", "--threshold", type=float, default=0.5,
+ap.add_argument("-t", "--threshold", type=float, default=0.1,
 	help="threshold when applyong non-maxima suppression")
 args = vars(ap.parse_args())
 print(args['confidence'])
@@ -42,6 +51,7 @@ def intersect(A,B,C,D):
 
 def ccw(A,B,C):
 	return (C[1]-A[1]) * (B[0]-A[0]) > (B[1]-A[1]) * (C[0]-A[0])
+
 
 # load the COCO class labels our YOLO model was trained on
 labelsPath = os.path.sep.join([args["yolo"], "classes.names"])
@@ -54,8 +64,8 @@ COLORS = np.random.randint(0, 255, size=(200, 3),
 	dtype="uint8")
 
 # derive the paths to the YOLO weights and model configuration
-weightsPath = os.path.sep.join([args["yolo"], "yolov3_custom_10000.weights"])
-configPath = os.path.sep.join([args["yolo"], "yolov3_custom.cfg"])
+weightsPath = os.path.sep.join([args["yolo"], "yolov4-tiny-custom_10000.weights"])
+configPath = os.path.sep.join([args["yolo"], "yolov4-tiny-custom.cfg"])
 
 # load our YOLO object detector trained on COCO dataset (80 classes)
 # and determine only the *output* layer names that we need from YOLO
@@ -66,12 +76,13 @@ ln = net.getUnconnectedOutLayersNames()
 
 # initialize the video stream, pointer to output video file, and
 # frame dimensions
-vs = cv2.VideoCapture(args["input"])
+# vs = cv2.VideoCapture(args["input"])
+vs = cv2.VideoCapture("http://192.168.1.4:8081/video")
 writer = None
 # (W, H) = (None, None)
 
 frameIndex = 0
-
+frame = None
 # try to determine the total number of frames in the video file
 try:
 	prop = cv2.cv.CV_CAP_PROP_FRAME_COUNT if imutils.is_cv2() \
@@ -86,6 +97,7 @@ except:
 	print("[INFO] no approx. completion time can be provided")
 	total = -1
 
+
 # loop over frames from the video file stream
 while True:
 	# read the next frame from the file
@@ -94,6 +106,7 @@ while True:
 	print("start")
 	# if the frame was not grabbed, then we have reached the end
 	# of the stream
+	
 	if not grabbed:
 		break
 
@@ -119,6 +132,7 @@ while True:
 	# loop over each of the layer outputs
 	for output in layerOutputs:
 		# loop over each of the detections
+		print("output",output)
 		for detection in output:
 			# extract the class ID and confidence (i.e., probability)
 			# of the current object detection
@@ -257,9 +271,11 @@ while True:
 			# text = "{}".format(indexIDs[i])
 			# cv2.putText(frame, text, (x, y - 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, color, 2)
 			i += 1
+			print("1235555")
 
-	# draw line
+	# # draw line
 	cv2.line(frame, line[0], line[1], (0, 255, 255), 3)
+	print(line[0])
 	
 
 	# draw counter
@@ -269,10 +285,15 @@ while True:
 	cv2.putText(frame, 'BACK'+ ":" + str(BACK), (20, 80), font, 0.8, (0,0,0),2)
 	cv2.putText(frame, 'BACK HUMAN'+ ":" + str(backhuman), (20, 110), font, 0.8, (0,0,0),2)
 	# counter += 1
-
+	print("123")
 	# saves image file
 	cv2.imwrite("output/frame-{}.png".format(frameIndex), frame)
-
+	cv2.imshow('frame',frame)
+	cv2.waitKey(1)
+	# print(frame)
+	# show_frame(frame)
+	
+	
 	# check if the video writer is None
 	if writer is None:
 		# initialize our video writer
@@ -292,7 +313,7 @@ while True:
 
 	# increase frame index
 	frameIndex += 1
-
+	
 	#if frameIndex >= 4000: # limits the execution to the first 4000 frames
 	#	print("[INFO] cleaning up...")
 	#	writer.release()
